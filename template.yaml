@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Roman Numerals Converter Application Deployment
+
+Parameters:
+  KeyPairName:
+    Description: Name of an existing EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 Key Pair.
+    Default: first2  # İlk olarak "first2" anahtar çiftini kullanır
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0648880541a3156f7  # Amazon Linux 2
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+        - !Ref MySecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y python3-pip
+          git clone https://github.com/yeditepe0123/roman-numerals-converter-project.git /home/ec2-user/roman-numerals-converter-project
+          cd /home/ec2-user/roman-numerals-converter-project
+          /usr/local/bin/python3 -m pip install -r requirements.txt  # Eğer Python bağımlılıklarınız varsa
+          /usr/local/bin/python3 roman_converter.py
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP, SSH, and HTTPS access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  WebsiteURL:
+    Description: URL of the Roman Numerals Converter Application
+    Value: !Sub "http://${MyEC2Instance.PublicIp}"
