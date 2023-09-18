@@ -37,7 +37,7 @@ Resources:
         cd /home/ec2-user
         wget -P templates https://raw.githubusercontent.com/awsdevopsteam/roman-number-conventor/master/templates/index.html
         wget -P templates https://raw.githubusercontent.com/yeditepe0123/roman-numerals-converter-project/main/templates/result.html
-        wget https://raw.githubusercontent.com/yeditepe0123/roman-numerals-converter-project/main/roman_coverter.py
+        wget https://raw.githubusercontent.com/yeditepe0123/roman-numerals-converter-project/main/app.py
         python3 app.py
   
 
