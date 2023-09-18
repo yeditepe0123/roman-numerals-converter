@@ -1,37 +1,52 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Roman Numerals Converter Application Deployment
+AWSTemplateFormatVersion: 2010-09-09
 
-Parameters:
-  KeyPairName:
-    Description: Name of an existing EC2 Key Pair for SSH access
+Description: |
+  CloudFormation Template for Roman Numerals Converter Application. 
+  This template creates Python Flask Web Application on Amazon Linux 2023  
+  EC2 Instance with custom security group allowing http connections on port 80, 8080 and SSH connection on port 22. Roman Numerals Converter Application is downloaded from Github repository, then installed on Flask.
+
+Parameters: 
+  latestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'
+
+  keyName:
+    Description: Chose your key pair
     Type: AWS::EC2::KeyPair::KeyName
-    ConstraintDescription: Must be the name of an existing EC2 Key Pair.
-    Default: first2  # İlk olarak "first2" anahtar çiftini kullanır
+    Default: firstkey1
 
 Resources:
-  MyEC2Instance:
+  myWebServer:
     Type: AWS::EC2::Instance
     Properties:
+      ImageId: !Ref latestAmiId
       InstanceType: t2.micro
-      ImageId: ami-0648880541a3156f7  # Amazon Linux 2
-      KeyName: !Ref KeyPairName
-      SecurityGroups:
-        - !Ref MySecurityGroup
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum update -y
-          yum install -y python3-pip
-          git clone https://github.com/yeditepe0123/roman-numerals-converter-project.git /home/ec2-user/roman-numerals-converter-project
-          cd /home/ec2-user/roman-numerals-converter-project
-          /usr/local/bin/python3 -m pip install -r requirements.txt  # Eğer Python bağımlılıklarınız varsa
-          /usr/local/bin/python3 roman_converter.py
+      KeyName: !Ref keyName
+      SecurityGroupIds: 
+        - !Ref mySecGrp
+      Tags: 
+        - Key: Name
+          Value: !Sub Web Server of ${AWS::StackName} Stack 
+      UserData: !Base64 |
+        #! /bin/bash
+        yum update -y
+        yum install python3 -y
+        yum install python3-pip -y
+        pip3 install flask
+        yum install git -y
+        cd /home/ec2-user
+        wget -P templates https://raw.githubusercontent.com/awsdevopsteam/roman-number-conventor/master/templates/index.html
+        wget -P templates https://raw.githubusercontent.com/yeditepe0123/roman-numerals-converter-project/main/templates/result.html
+        wget https://raw.githubusercontent.com/yeditepe0123/roman-numerals-converter-project/main/roman_coverter.py
+        python3 app.py
+  
 
-  MySecurityGroup:
+  mySecGrp:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP, SSH, and HTTPS access
-      SecurityGroupIngress:
+      GroupDescription: ssh http and port 8080 # Required
+      GroupName: osvaldosecgrpromen
+      SecurityGroupIngress: 
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -41,11 +56,13 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
+          FromPort: 8080
+          ToPort: 8080
           CidrIp: 0.0.0.0/0
-
+  
 Outputs:
   WebsiteURL:
-    Description: URL of the Roman Numerals Converter Application
-    Value: !Sub "http://${MyEC2Instance.PublicIp}"
+    Value: !Sub 
+      - http://${PIA}
+      - PIA: !GetAtt myWebServer.PublicDnsName
+    Description: Roman Numerals Converter Application URL
